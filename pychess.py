@@ -6,6 +6,7 @@ class Chess:
     ascii = False
     board = None
     san_history = []
+    fen_history = []
     san_pattern = re.compile(r"([pRNBQK])?([a-h])?([1-8])?(x)?([a-h])([1-8])( ?e\.?p\.? ?)?(=[RNBQ])?([+#])?", re.IGNORECASE)
     rank = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5, "7": 6, "8": 7}
     file = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
@@ -55,6 +56,12 @@ class Chess:
 
         return san
     
+    def get_fen_history(self, idx: int) -> str:
+        return self.fen_history[idx]
+    
+    def render_fen(self, fen: str) -> str:
+        return chess.Board(fen).unicode() if not self.ascii else str(chess.Board(fen))
+
     def get_info(self, contain_legal_moves: bool=False) -> tuple:
         board_state = str(self.board.unicode())
         turn = "white" if self.board.turn else "black"
@@ -167,6 +174,7 @@ class Chess:
         self.san_history.append(move)
 
         self.board.push_san(san)
+        self.fen_history.append(self.board.fen())
 
         self.turn_end()
 
@@ -176,6 +184,7 @@ class Chess:
         self.san_history.append(move)
 
         self.board.push_uci(uci)
+        self.fen_history.append(self.board.fen())
 
         self.turn_end()
 
@@ -185,6 +194,8 @@ class Chess:
 
         uci = chess.Move.from_uci(uci)
         self.board.push(uci)
+
+        self.turn_end()
 
     def turn_piece(self, piece: str) -> str:
         return piece.upper() if self.board.turn else piece.lower()
@@ -209,6 +220,7 @@ class Chess:
                 self.board.set_piece_at(chess.C8, chess.Piece.from_symbol(self.turn_piece("K")))
                 self.board.set_piece_at(chess.D8, chess.Piece.from_symbol(self.turn_piece("R")))
 
+            self.fen_history.append(self.board.fen())
             self.san_history.append("O-O-O"+self.check())
 
         else:
@@ -230,6 +242,7 @@ class Chess:
                 self.board.set_piece_at(chess.G8, chess.Piece.from_symbol(self.turn_piece("K")))
                 self.board.set_piece_at(chess.F8, chess.Piece.from_symbol(self.turn_piece("R")))
 
+            self.fen_history.append(self.board.fen())
             self.san_history.append("O-O"+self.check())
 
         self.turn_end()
@@ -249,6 +262,7 @@ class Chess:
         else:
             self.play_uci_with_illegal(move)
 
+        self.fen_history.append(self.board.fen())
         self.san_history.append(encoded_san)
         self.turn_end()
         
@@ -300,7 +314,6 @@ class Chess:
         return False
 
     def turn_end(self) -> None:
-        self.board.turn = not self.board.turn
         self.board.push(chess.Move.null())
 
     def make_illegal_move(self, move: str) -> None:
@@ -330,6 +343,16 @@ class Chess:
         return self.board.is_game_over()
 
 if __name__ == "__main__":
-    board = Chess()
+    board = Chess(guide=True, ascii=True)
 
-    print(board.decode_san("Bbc4"))
+    print(board)
+    board.play_with_illegal("ke7")
+    print(board)
+    board.play_with_illegal("o-o-o")
+    print(board)
+    board.play_with_illegal("e7")
+    print(board)
+    board.play_with_illegal("o-o")
+    print(board)
+
+    print(board.render_fen(board.get_fen_history(0)))
